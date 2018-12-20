@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Famous Movies</string>
+    <string name="error_message">Oh Oh, something has occurred wrong!</string>
+
+    <!-- Menu Strings -->
+    <string name="action_filter">Filter</string>
+    <string name="action_filter_topRated">Top Rated</string>
+    <string name="action_filter_popular">Popular</string>
+
+</resources>
