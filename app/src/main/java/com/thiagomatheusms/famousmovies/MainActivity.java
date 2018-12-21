@@ -1,5 +1,6 @@
 package com.thiagomatheusms.famousmovies;
 
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -117,6 +118,7 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
     }
 
     private void showErrorMessage(){
+        mLoadingIndicator.setVisibility(View.INVISIBLE);
         mRecyclerViewMovies.setVisibility(View.INVISIBLE);
         mErrorMessage.setVisibility(View.VISIBLE);
     }
@@ -148,7 +150,14 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
 
     @Override
     public void onClickHandler(Movie movieClicked) {
-        Toast.makeText(getBaseContext(), movieClicked.getTitle(), Toast.LENGTH_SHORT).show();
+        Intent intent = new Intent(getBaseContext(), DetailMovie.class);
+        intent.putExtra("TITLE", movieClicked.getTitle());
+        intent.putExtra("POSTER_PATH", movieClicked.getPoster_path());
+        intent.putExtra("ORIGINAL_TITLE", movieClicked.getOriginal_title());
+        intent.putExtra("SYNOPSIS", movieClicked.getSynopsis());
+        intent.putExtra("DATE_RELEASE", movieClicked.getDate_release());
+        intent.putExtra("VOTE_AVERAGE", movieClicked.getVote_average());
+        startActivity(intent);
     }
 
 

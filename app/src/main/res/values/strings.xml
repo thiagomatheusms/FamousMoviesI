@@ -1,6 +1,11 @@
 <resources>
     <string name="app_name">Famous Movies</string>
     <string name="error_message">Oh Oh, something has occurred wrong!</string>
+    <string name="original_title">Título original:</string>
+    <string name="release_date">Data de lançamento:</string>
+    <string name="synopsis">Sinpose</string>
+    <string name="vote_average">Avaliação dos usuários</string>
+
 
     <!-- Menu Strings -->
     <string name="action_filter">Filter</string>
