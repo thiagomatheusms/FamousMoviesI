@@ -2,6 +2,8 @@ package com.thiagomatheusms.famousmovies;
 
 import android.content.Intent;
 import android.os.AsyncTask;
+import android.os.Handler;
+import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.GridLayoutManager;
@@ -21,6 +23,7 @@ import com.thiagomatheusms.famousmovies.Adapter.MoviesAdapter;
 import com.thiagomatheusms.famousmovies.Endpoints.GetDataService;
 import com.thiagomatheusms.famousmovies.Model.Movie;
 import com.thiagomatheusms.famousmovies.Model.Page;
+import com.thiagomatheusms.famousmovies.Utilities.InternetChecking;
 import com.thiagomatheusms.famousmovies.Utilities.RetrofitClientInstance;
 
 import java.io.IOException;
@@ -31,7 +34,7 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-public class MainActivity extends AppCompatActivity implements MoviesAdapter.MoviesAdapterOnClickHandler{
+public class MainActivity extends AppCompatActivity implements MoviesAdapter.MoviesAdapterOnClickHandler {
 
     //Views
     private ProgressBar mLoadingIndicator;
@@ -42,8 +45,9 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
     private MoviesAdapter mMoviesAdapter;
 
     //Retrofit Interface
-   private GetDataService service;
+    private GetDataService service;
 
+    private Handler handler;
 
     //Endless
     int previousTotal = 0;
@@ -53,6 +57,7 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
 
     int i = 1;
     List<Movie> teste;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,27 +69,45 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
 
         mRecyclerViewMovies = (RecyclerView) findViewById(R.id.rv_movies);
 
-        GridLayoutManager layoutManager = new GridLayoutManager(this,2);
+        GridLayoutManager layoutManager = new GridLayoutManager(this, 2);
         mRecyclerViewMovies.setLayoutManager(layoutManager);
         mRecyclerViewMovies.setHasFixedSize(true);
 
         mMoviesAdapter = new MoviesAdapter(this);
         mRecyclerViewMovies.setAdapter(mMoviesAdapter);
 
-        request("popular");
+        handler = new Handler() {
+            @Override
+            public void handleMessage(Message msg) {
+                super.handleMessage(msg);
+                internetAnswer(msg);
+            }
+        };
 
+        InternetChecking internetChecking = new InternetChecking(handler);
+        internetChecking.start();
     }
 
-    private void request(String filter){
+    private void internetAnswer(Message msg) {
+        if (msg.obj.toString().equalsIgnoreCase("ok")) {
+            Toast.makeText(this, "TEM INTERNET", Toast.LENGTH_SHORT).show();
+            request("popular");
+        } else if (msg.obj.toString().equalsIgnoreCase("error")) {
+            Toast.makeText(this, "SEM INTERNET", Toast.LENGTH_SHORT).show();
+            showErrorMessage();
+        }
+    }
+
+    private void request(String filter) {
         mLoadingIndicator.setVisibility(View.VISIBLE);
         mErrorMessage.setVisibility(View.INVISIBLE);
 
         service = RetrofitClientInstance.getRetrofitInstance().create(GetDataService.class);
         retrofit2.Call<Page> call;
 
-        if (filter.equalsIgnoreCase("topRated")){
+        if (filter.equalsIgnoreCase("topRated")) {
             call = service.getTopRated(i);
-        }else{
+        } else {
             call = service.getPopular(i);
         }
 
@@ -102,22 +125,23 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
         });
     }
 
-    private void generateData(List<Movie> movieList){
+    private void generateData(List<Movie> movieList) {
         mLoadingIndicator.setVisibility(View.INVISIBLE);
-        if(movieList != null){
+        if (movieList != null) {
             showDataView();
             mMoviesAdapter.setMoviesList(movieList);
-        }else{
+
+        } else {
             showErrorMessage();
         }
     }
 
-    private void showDataView(){
+    private void showDataView() {
         mErrorMessage.setVisibility(View.INVISIBLE);
         mRecyclerViewMovies.setVisibility(View.VISIBLE);
     }
 
-    private void showErrorMessage(){
+    private void showErrorMessage() {
         mLoadingIndicator.setVisibility(View.INVISIBLE);
         mRecyclerViewMovies.setVisibility(View.INVISIBLE);
         mErrorMessage.setVisibility(View.VISIBLE);
@@ -161,26 +185,7 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
     }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    //    public void requisita(){
+//        public void requisita(){
 //        mRecyclerViewMovies.addOnScrollListener(new RecyclerView.OnScrollListener() {
 //
 //            @Override
@@ -204,8 +209,7 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
 //                    Log.i("Yaeye!", "end called");
 //
 //                    // Do something
-//                    GetDataService service = RetrofitClientInstance.getRetrofitInstance().create(GetDataService.class);
-//                    retrofit2.Call<Page> call = service.getAll(2);
+//                    request("teste");
 //
 //                    loading = true;
 //                }

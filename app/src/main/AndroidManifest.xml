@@ -3,6 +3,7 @@
     package="com.thiagomatheusms.famousmovies">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
 
     <application
         android:allowBackup="true"
@@ -18,7 +19,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".DetailMovie"></activity>
+        <activity android:name=".DetailMovie"
+            android:parentActivityName=".MainActivity">
+            <meta-data
+                android:name="Detail Movie S"
+                android:value="">
+
+            </meta-data>
+        </activity>
     </application>
 
 </manifest>
