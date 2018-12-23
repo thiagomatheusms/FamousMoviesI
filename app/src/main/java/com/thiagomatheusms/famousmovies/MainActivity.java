@@ -1,20 +1,16 @@
 package com.thiagomatheusms.famousmovies;
 
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.GridLayoutManager;
-import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -23,10 +19,10 @@ import com.thiagomatheusms.famousmovies.Adapter.MoviesAdapter;
 import com.thiagomatheusms.famousmovies.Endpoints.GetDataService;
 import com.thiagomatheusms.famousmovies.Model.Movie;
 import com.thiagomatheusms.famousmovies.Model.Page;
+import com.thiagomatheusms.famousmovies.Utilities.EndlessScroll;
 import com.thiagomatheusms.famousmovies.Utilities.InternetChecking;
 import com.thiagomatheusms.famousmovies.Utilities.RetrofitClientInstance;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,16 +43,15 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
     //Retrofit Interface
     private GetDataService service;
 
+    //Handler for send internet messages
     private Handler handler;
 
-    //Endless
-    int previousTotal = 0;
-    boolean loading = true;
-    int visibleThreshold = 5;
-    int firstVisibleItem, visibleItemCount, totalItemCount;
-
-    int i = 1;
-    List<Movie> teste;
+    //Others variables
+    private String filter = "popular";
+    private int mCurrentPage = 0;
+    private EndlessScroll scroolListener;
+    private int currentItems;
+    private List<Movie> mMoviesList = new ArrayList<>();
 
 
     @Override
@@ -69,12 +64,22 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
 
         mRecyclerViewMovies = (RecyclerView) findViewById(R.id.rv_movies);
 
-        GridLayoutManager layoutManager = new GridLayoutManager(this, 2);
+        final GridLayoutManager layoutManager = new GridLayoutManager(this, 2);
         mRecyclerViewMovies.setLayoutManager(layoutManager);
         mRecyclerViewMovies.setHasFixedSize(true);
 
-        mMoviesAdapter = new MoviesAdapter(this);
+        mMoviesAdapter = new MoviesAdapter(this, mMoviesList);
         mRecyclerViewMovies.setAdapter(mMoviesAdapter);
+
+        scroolListener = new EndlessScroll(layoutManager) {
+            @Override
+            public void onLoadMore(int page, int totalItemsCount, RecyclerView view) {
+                InternetChecking internetChecking = new InternetChecking(handler);
+                internetChecking.start();
+            }
+        };
+
+        mRecyclerViewMovies.addOnScrollListener(scroolListener);
 
         handler = new Handler() {
             @Override
@@ -90,32 +95,36 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
 
     private void internetAnswer(Message msg) {
         if (msg.obj.toString().equalsIgnoreCase("ok")) {
-            Toast.makeText(this, "TEM INTERNET", Toast.LENGTH_SHORT).show();
-            request("popular");
+            getData();
         } else if (msg.obj.toString().equalsIgnoreCase("error")) {
-            Toast.makeText(this, "SEM INTERNET", Toast.LENGTH_SHORT).show();
-            showErrorMessage();
+            Toast.makeText(this, "No Internet Network!", Toast.LENGTH_SHORT).show();
         }
     }
 
-    private void request(String filter) {
+    private void getData() {
         mLoadingIndicator.setVisibility(View.VISIBLE);
         mErrorMessage.setVisibility(View.INVISIBLE);
+
+        mCurrentPage++;
 
         service = RetrofitClientInstance.getRetrofitInstance().create(GetDataService.class);
         retrofit2.Call<Page> call;
 
         if (filter.equalsIgnoreCase("topRated")) {
-            call = service.getTopRated(i);
+            call = service.getTopRated(mCurrentPage);
         } else {
-            call = service.getPopular(i);
+            call = service.getPopular(mCurrentPage);
         }
 
         call.enqueue(new Callback<Page>() {
             @Override
             public void onResponse(Call<Page> call, Response<Page> response) {
                 Page page = response.body();
-                generateData(page.getMovies());
+                if (page != null) {
+                    generateData(page.getMovies());
+                }else{
+                    showErrorMessage();
+                }
             }
 
             @Override
@@ -127,9 +136,11 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
 
     private void generateData(List<Movie> movieList) {
         mLoadingIndicator.setVisibility(View.INVISIBLE);
+        currentItems = mMoviesAdapter.getItemCount();
+
         if (movieList != null) {
             showDataView();
-            mMoviesAdapter.setMoviesList(movieList);
+            mMoviesAdapter.setMoviesList(movieList,currentItems);
 
         } else {
             showErrorMessage();
@@ -161,11 +172,23 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
 
         switch (idItem) {
             case R.id.action_filter_popular:
-                request("popular");
+                mCurrentPage = 0;
+                filter = "popular";
+                mMoviesList.clear();
+                mMoviesAdapter.notifyDataSetChanged();
+                scroolListener.resetState();
+                InternetChecking internetChecking = new InternetChecking(handler);
+                internetChecking.start();
                 break;
 
             case R.id.action_filter_topRated:
-                request("topRated");
+                mCurrentPage = 0;
+                filter = "topRated";
+                mMoviesList.clear();
+                mMoviesAdapter.notifyDataSetChanged();
+                scroolListener.resetState();
+                InternetChecking internetChecking2 = new InternetChecking(handler);
+                internetChecking2.start();
                 break;
         }
 
@@ -183,39 +206,4 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
         intent.putExtra("VOTE_AVERAGE", movieClicked.getVote_average());
         startActivity(intent);
     }
-
-
-//        public void requisita(){
-//        mRecyclerViewMovies.addOnScrollListener(new RecyclerView.OnScrollListener() {
-//
-//            @Override
-//            public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
-//                super.onScrolled(recyclerView, dx, dy);
-//
-//                visibleItemCount = mRecyclerViewMovies.getChildCount();
-//                totalItemCount = layoutManager.getItemCount();
-//                firstVisibleItem = layoutManager.findFirstVisibleItemPosition();
-//
-//                if (loading) {
-//                    if (totalItemCount > previousTotal) {
-//                        loading = false;
-//                        previousTotal = totalItemCount;
-//                    }
-//                }
-//                if (!loading && (totalItemCount - visibleItemCount)
-//                        <= (firstVisibleItem + visibleThreshold)) {
-//                    // End has been reached
-//
-//                    Log.i("Yaeye!", "end called");
-//
-//                    // Do something
-//                    request("teste");
-//
-//                    loading = true;
-//                }
-//            }
-//        });
-//    }
-
-
 }
