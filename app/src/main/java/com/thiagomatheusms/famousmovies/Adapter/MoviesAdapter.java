@@ -13,6 +13,7 @@ import com.thiagomatheusms.famousmovies.Model.Movie;
 import com.thiagomatheusms.famousmovies.Model.Page;
 import com.thiagomatheusms.famousmovies.R;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MoviesAdapterViewHolder> {
@@ -21,8 +22,9 @@ public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MoviesAdap
     private List<Movie> mMoviesList;
     private MoviesAdapterOnClickHandler moviesAdapterOnClickHandler;
 
-    public MoviesAdapter(MoviesAdapterOnClickHandler clickHandler) {
+    public MoviesAdapter(MoviesAdapterOnClickHandler clickHandler, List<Movie> mList) {
         this.moviesAdapterOnClickHandler = clickHandler;
+        this.mMoviesList = mList;
     }
 
     @NonNull
@@ -79,8 +81,8 @@ public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MoviesAdap
     }
 
     //setList
-    public void setMoviesList(List<Movie> movies){
-        this.mMoviesList = movies;
-        notifyDataSetChanged();
+    public void setMoviesList(List<Movie> movies, int currentItems){
+        this.mMoviesList.addAll(movies);
+        notifyItemRangeInserted(currentItems, movies.size()-1);
     }
 }
