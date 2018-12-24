@@ -33,9 +33,9 @@ public class DetailMovie extends AppCompatActivity {
         Intent intentStartThisActivity = getIntent();
 
         if (intentStartThisActivity != null) {
-//            if (intentStartThisActivity.hasExtra("TITLE") && intentStartThisActivity.hasExtra("POSTER_PATH")
-//                    && intentStartThisActivity.hasExtra("ORIGINAL_TITLE") && intentStartThisActivity.hasExtra("SYNOPSIS")
-//                    && intentStartThisActivity.hasExtra("DATA_RELEASE") && intentStartThisActivity.hasExtra("VOTE_AVERAGE")) {
+            if (intentStartThisActivity.hasExtra("TITLE") && intentStartThisActivity.hasExtra("POSTER_PATH")
+                    && intentStartThisActivity.hasExtra("ORIGINAL_TITLE") && intentStartThisActivity.hasExtra("SYNOPSIS")
+                    && intentStartThisActivity.hasExtra("DATE_RELEASE") && intentStartThisActivity.hasExtra("VOTE_AVERAGE")) {
 
                 String mTitle = intentStartThisActivity.getStringExtra("TITLE");
                 String mPosterPath = intentStartThisActivity.getStringExtra("POSTER_PATH");
@@ -51,7 +51,7 @@ public class DetailMovie extends AppCompatActivity {
                 mSynopsisMovie.setText(mSynopsis);
                 mDateReleaseMovie.setText(mDateRelease);
                 mVoteAverageMovie.setRating(setRatingVote(mVoteAverage));
-//            }
+            }
         }
 
     }

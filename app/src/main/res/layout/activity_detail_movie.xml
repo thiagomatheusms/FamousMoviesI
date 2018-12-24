@@ -29,7 +29,9 @@
                     android:layout_width="150dp"
                     android:layout_height="wrap_content"
                     android:layout_marginRight="10dp"
-                    android:src="@drawable/ic_launcher_background" />
+                    android:src="@drawable/ic_launcher_background"
+                    android:contentDescription="Movie poster in miniature"
+                    android:layout_marginEnd="10dp" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -40,7 +42,7 @@
                         android:id="@+id/tv_title_movie"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Movie Title"
+                        android:text="@string/title"
                         android:textColor="@color/colorWhite"
                         android:textSize="20sp"
                         android:textStyle="bold"
@@ -84,7 +86,8 @@
                 android:background="@color/colorGrayMedium"
                 android:layout_marginBottom="10dp"
                 android:layout_marginTop="10dp"
-                android:elevation="3dp">
+                android:elevation="3dp"
+                tools:targetApi="lollipop">
             </View>
 
             <TextView
@@ -107,7 +110,8 @@
                 android:background="@color/colorGrayMedium"
                 android:layout_marginBottom="10dp"
                 android:layout_marginTop="10dp"
-                android:elevation="3dp">
+                android:elevation="3dp"
+                tools:targetApi="lollipop">
             </View>
 
             <TextView
@@ -126,7 +130,8 @@
                 android:layout_marginBottom="20dp"
                 android:isIndicator="true"
                 android:stepSize="0.1"
-                android:progressBackgroundTint="@color/colorGray"/>
+                android:progressBackgroundTint="@color/colorGray"
+                tools:targetApi="lollipop" />
 
         </LinearLayout>
     </ScrollView>

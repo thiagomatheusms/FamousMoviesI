@@ -89,6 +89,11 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
             }
         };
 
+        sendHandlerMessage();
+
+    }
+
+    private void sendHandlerMessage(){
         InternetChecking internetChecking = new InternetChecking(handler);
         internetChecking.start();
     }
@@ -166,29 +171,29 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
         return true;
     }
 
+    private void listClear(){
+        mCurrentPage = 0;
+        mMoviesList.clear();
+        mMoviesAdapter.notifyDataSetChanged();
+        scroolListener.resetState();
+        sendHandlerMessage();
+    }
+
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int idItem = item.getItemId();
 
         switch (idItem) {
             case R.id.action_filter_popular:
-                mCurrentPage = 0;
+                listClear();
                 filter = "popular";
-                mMoviesList.clear();
-                mMoviesAdapter.notifyDataSetChanged();
-                scroolListener.resetState();
-                InternetChecking internetChecking = new InternetChecking(handler);
-                internetChecking.start();
+                setTitle("Popular");
                 break;
 
             case R.id.action_filter_topRated:
-                mCurrentPage = 0;
+                listClear();
                 filter = "topRated";
-                mMoviesList.clear();
-                mMoviesAdapter.notifyDataSetChanged();
-                scroolListener.resetState();
-                InternetChecking internetChecking2 = new InternetChecking(handler);
-                internetChecking2.start();
+                setTitle("Top Rated");
                 break;
         }
 
