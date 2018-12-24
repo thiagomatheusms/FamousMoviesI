@@ -8,9 +8,11 @@ import retrofit2.http.Query;
 
 public interface GetDataService {
 
-    @GET("/3/movie/popular?api_key=18343d38f6be3a0a88ca9c1898b272e7")
+    public static final String API_KEY = "";
+
+    @GET("/3/movie/popular?api_key="+API_KEY+"")
     Call<Page> getPopular(@Query("page") int page);
 
-    @GET("/3/movie/top_rated?api_key=18343d38f6be3a0a88ca9c1898b272e7")
+    @GET("/3/movie/top_rated?api_key="+API_KEY+"")
     Call<Page> getTopRated(@Query("page") int page);
 }
