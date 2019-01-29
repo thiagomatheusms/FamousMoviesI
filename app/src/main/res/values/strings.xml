@@ -12,5 +12,6 @@
     <string name="action_filter">Filter</string>
     <string name="action_filter_topRated">Top Rated</string>
     <string name="action_filter_popular">Popular</string>
+    <string name="movie_poster_in_miniature">Movie poster in miniature</string>
 
 </resources>
