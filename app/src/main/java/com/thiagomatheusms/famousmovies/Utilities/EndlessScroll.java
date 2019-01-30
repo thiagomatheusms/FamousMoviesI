@@ -5,6 +5,8 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.StaggeredGridLayoutManager;
 
+import com.thiagomatheusms.famousmovies.MainActivity;
+
 public abstract class EndlessScroll extends RecyclerView.OnScrollListener {
     // The minimum amount of items to have below your current scroll position
     // before loading more.
@@ -80,6 +82,7 @@ public abstract class EndlessScroll extends RecyclerView.OnScrollListener {
         if (loading && (totalItemCount > previousTotalItemCount)) {
             loading = false;
             previousTotalItemCount = totalItemCount;
+
         }
 
         // If it isn’t currently loading, we check to see if we have breached

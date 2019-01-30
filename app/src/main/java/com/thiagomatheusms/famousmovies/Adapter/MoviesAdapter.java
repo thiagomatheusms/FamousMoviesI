@@ -7,8 +7,12 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
+import com.squareup.picasso.Picasso;
+import com.squareup.picasso.Target;
+import com.thiagomatheusms.famousmovies.MainActivity;
 import com.thiagomatheusms.famousmovies.Model.Movie;
 import com.thiagomatheusms.famousmovies.Model.Page;
 import com.thiagomatheusms.famousmovies.R;
@@ -43,25 +47,32 @@ public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MoviesAdap
     @Override
     public void onBindViewHolder(@NonNull MoviesAdapterViewHolder holder, int position) {
         String urlMoviePoster = mMoviesList.get(position).getPoster_path();
+        String titulo = mMoviesList.get(position).getTitle();
 
-        Glide.with(holder.itemView).load(BASE_URL_IMG + urlMoviePoster).into(holder.mImageMovie);
+//        Glide.with(holder.itemView).load(BASE_URL_IMG + urlMoviePoster).into(holder.mImageMovie);
+        Picasso.get().load(BASE_URL_IMG + urlMoviePoster)
+                .placeholder(R.drawable.ic_launcher_background)
+                .error(R.drawable.ic_launcher_foreground)
+                .fit()
+                .into(holder.mImageMovie);
+//        holder.mImageMovie.setText(titulo);
     }
 
     @Override
     public int getItemCount() {
-        if(mMoviesList == null){
+        if (mMoviesList == null) {
             return 0;
         }
         return mMoviesList.size();
     }
 
     //Interface listener
-    public interface MoviesAdapterOnClickHandler{
-        void onClickHandler (Movie movieClicked);
+    public interface MoviesAdapterOnClickHandler {
+        void onClickHandler(Movie movieClicked);
     }
 
     //ViewHolder
-    public class MoviesAdapterViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener{
+    public class MoviesAdapterViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
 
         ImageView mImageMovie;
 
@@ -81,8 +92,8 @@ public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MoviesAdap
     }
 
     //setList
-    public void setMoviesList(List<Movie> movies, int currentItems){
-        this.mMoviesList.addAll(movies);
-        notifyItemRangeInserted(currentItems, movies.size()-1);
+    public void setMoviesList(List<Movie> movies, int currentItems) {
+        mMoviesList = movies;
+        notifyDataSetChanged();
     }
 }

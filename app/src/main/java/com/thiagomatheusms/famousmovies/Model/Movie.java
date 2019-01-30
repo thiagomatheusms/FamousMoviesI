@@ -1,8 +1,14 @@
 package com.thiagomatheusms.famousmovies.Model;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
 import com.google.gson.annotations.SerializedName;
 
-public class Movie {
+public class Movie implements Parcelable {
+
+    @SerializedName("id")
+    private int id;
 
     @SerializedName("title")
     private String title;
@@ -24,6 +30,36 @@ public class Movie {
 
     public Movie(String title) {
         this.title = title;
+    }
+
+    protected Movie(Parcel in) {
+        id = in.readInt();
+        title = in.readString();
+        poster_path = in.readString();
+        original_title = in.readString();
+        synopsis = in.readString();
+        vote_average = in.readFloat();
+        date_release = in.readString();
+    }
+
+    public static final Creator<Movie> CREATOR = new Creator<Movie>() {
+        @Override
+        public Movie createFromParcel(Parcel in) {
+            return new Movie(in);
+        }
+
+        @Override
+        public Movie[] newArray(int size) {
+            return new Movie[size];
+        }
+    };
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
     }
 
     public String getTitle() {
@@ -72,5 +108,21 @@ public class Movie {
 
     public void setDate_release(String date_release) {
         this.date_release = date_release;
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel parcel, int i) {
+        parcel.writeInt(id);
+        parcel.writeString(title);
+        parcel.writeString(poster_path);
+        parcel.writeString(original_title);
+        parcel.writeString(synopsis);
+        parcel.writeFloat(vote_average);
+        parcel.writeString(date_release);
     }
 }

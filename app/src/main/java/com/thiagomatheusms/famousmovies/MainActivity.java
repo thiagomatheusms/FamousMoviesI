@@ -1,6 +1,7 @@
 package com.thiagomatheusms.famousmovies;
 
 import android.os.Debug;
+import android.os.Parcelable;
 import android.os.PersistableBundle;
 import android.support.annotation.NonNull;
 
@@ -15,6 +16,7 @@ import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.GridLayoutManager;
+import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.Menu;
@@ -60,7 +62,7 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
 
     //Others variables
     private String filter = "popular";
-    private int mCurrentPage = 1;
+    private int mCurrentPage = 0;
     private EndlessScroll scroolListener;
     private int currentItems;
     private List<Movie> mMoviesList = new ArrayList<>();
@@ -70,7 +72,10 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
 
     //constant for Bundle's SavedInstance
     private static final String FILTER_KEY = "filterKey";
+    private static final String CURRENT_PAGE_KEY = "currentPageKey";
+    public static final String MOVIES_LIST_KEY = "moviesListKey";
 
+    GridLayoutManager layoutManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,7 +87,7 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
 
         mRecyclerViewMovies = (RecyclerView) findViewById(R.id.rv_movies);
 
-        final GridLayoutManager layoutManager = new GridLayoutManager(this, 2);
+        layoutManager = new GridLayoutManager(this, 2);
         mRecyclerViewMovies.setLayoutManager(layoutManager);
         mRecyclerViewMovies.setHasFixedSize(true);
 
@@ -91,17 +96,17 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
 
         if (savedInstanceState != null) {
             filter = savedInstanceState.getString(FILTER_KEY);
+            mCurrentPage = savedInstanceState.getInt(CURRENT_PAGE_KEY);
+
+            if (savedInstanceState.containsKey(MOVIES_LIST_KEY)) {
+                mMoviesList = savedInstanceState.getParcelableArrayList(MOVIES_LIST_KEY);
+
+                if (mMoviesList != null) {
+                    mMoviesAdapter.setMoviesList(mMoviesList, 1);
+                }
+            }
         }
 
-        scroolListener = new EndlessScroll(layoutManager) {
-            @Override
-            public void onLoadMore(int page, int totalItemsCount, RecyclerView view) {
-                mCurrentPage++;
-                sendHandlerMessage();
-            }
-        };
-
-        mRecyclerViewMovies.addOnScrollListener(scroolListener);
 
         handler = new Handler() {
             @Override
@@ -112,6 +117,15 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
         };
 
         sendHandlerMessage();
+
+        scroolListener = new EndlessScroll(layoutManager) {
+            @Override
+            public void onLoadMore(int page, int totalItemsCount, RecyclerView view) {
+                    Toast.makeText(MainActivity.this, "No Internet Network!", Toast.LENGTH_SHORT).show();
+            }
+        };
+
+        mRecyclerViewMovies.addOnScrollListener(scroolListener);
 
     }
 
@@ -129,6 +143,7 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
     }
 
     private void getData() {
+
         LoaderManager loaderManager = getSupportLoaderManager();
         Loader<Object> searchLoader = loaderManager.getLoader(LOADER_ID);
         if (searchLoader == null) {
@@ -136,6 +151,7 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
         } else {
             loaderManager.restartLoader(LOADER_ID, null, this);
         }
+
     }
 
     /* SHOW */
@@ -183,7 +199,7 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
     }
 
     private void listClear() {
-        mCurrentPage = 1;
+        mCurrentPage = 0;
         mMoviesList.clear();
         mMoviesAdapter.notifyDataSetChanged();
         scroolListener.resetState();
@@ -207,25 +223,28 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
     /* LOADER */
 
     @Override
-    public Loader<List<Movie>> onCreateLoader(int i, Bundle bundle) {
+    public Loader<List<Movie>> onCreateLoader(int i, final Bundle bundle) {
         return new AsyncTaskLoader<List<Movie>>(this) {
 
-            List<Movie> page = null;
+            List<Movie> mGithubJson;
 
             @Override
             protected void onStartLoading() {
 
-//                if (page != null) {
-//                    deliverResult(page);
-//                } else {
-                mLoadingIndicator.setVisibility(View.VISIBLE);
-                mErrorMessage.setVisibility(View.INVISIBLE);
-                forceLoad();
-//                }
+                if (mGithubJson != null) {
+                    return;
+                } else {
+                    mLoadingIndicator.setVisibility(View.VISIBLE);
+                    mErrorMessage.setVisibility(View.INVISIBLE);
+                    forceLoad();
+                }
             }
 
             @Override
             public List<Movie> loadInBackground() {
+                mCurrentPage++;
+                Log.i("PAGINA:", mCurrentPage + "");
+
 
                 service = RetrofitClientInstance.getRetrofitInstance().create(GetDataService.class);
 
@@ -252,7 +271,7 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
 
             @Override
             public void deliverResult(List<Movie> data) {
-                page = data;
+                mGithubJson = data;
                 super.deliverResult(data);
             }
         };
@@ -264,12 +283,15 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
         currentItems = mMoviesAdapter.getItemCount();
 
         if (data != null) {
+            mMoviesList.addAll(data);
             showDataView();
-            mMoviesAdapter.setMoviesList(data, currentItems);
+            mMoviesAdapter.setMoviesList(mMoviesList, currentItems);
 
         } else {
             showErrorMessage();
         }
+
+
     }
 
     @Override
@@ -281,5 +303,7 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putString(FILTER_KEY, filter);
+        outState.putInt(CURRENT_PAGE_KEY, mCurrentPage);
+        outState.putParcelableArrayList(MOVIES_LIST_KEY, (ArrayList<Movie>) mMoviesList);
     }
 }
