@@ -1,12 +1,16 @@
 package com.thiagomatheusms.famousmovies.Model;
 
+import android.arch.persistence.room.Entity;
+import android.arch.persistence.room.PrimaryKey;
 import android.os.Parcel;
 import android.os.Parcelable;
 
 import com.google.gson.annotations.SerializedName;
 
+@Entity(tableName = "movie")
 public class Movie implements Parcelable {
 
+    @PrimaryKey
     @SerializedName("id")
     private int id;
 
@@ -28,8 +32,14 @@ public class Movie implements Parcelable {
     @SerializedName("release_date")
     private String date_release;
 
-    public Movie(String title) {
+    public Movie(int id, String title, String poster_path, String original_title, String synopsis, float vote_average, String date_release) {
+        this.id = id;
         this.title = title;
+        this.poster_path = poster_path;
+        this.original_title = original_title;
+        this.synopsis = synopsis;
+        this.vote_average = vote_average;
+        this.date_release = date_release;
     }
 
     protected Movie(Parcel in) {

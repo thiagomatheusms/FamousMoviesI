@@ -7,6 +7,7 @@ import android.content.res.ColorStateList;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Parcelable;
 import android.os.PersistableBundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -30,6 +31,7 @@ import android.widget.Toast;
 import com.bumptech.glide.Glide;
 import com.thiagomatheusms.famousmovies.Adapter.MoviesAdapter;
 import com.thiagomatheusms.famousmovies.Adapter.VideosAdapter;
+import com.thiagomatheusms.famousmovies.Database.AppDataBase;
 import com.thiagomatheusms.famousmovies.Endpoints.GetDataService;
 import com.thiagomatheusms.famousmovies.Model.Movie;
 import com.thiagomatheusms.famousmovies.Model.Page;
@@ -54,10 +56,12 @@ public class DetailMovie extends AppCompatActivity implements LoaderManager.Load
 
     /* Others */
     private GetDataService service;
-    private int idMovie;
-    private int totalViews;
+    private int idMovieIntent;
+    private int idMovieSaveInstance;
+    private int totalReviews;
     private VideosAdapter videosAdapter;
-    private String urlVideo;
+    private Movie mMovie;
+    private static final String URL_YOUTUBE = "https://www.youtube.com/watch?v=";
 
     /* Constant for Loader*/
     private static final int LOADER_ID = 200;
@@ -65,6 +69,8 @@ public class DetailMovie extends AppCompatActivity implements LoaderManager.Load
 
     //constant for Bundle's SavedInstance
     public static final String ID_MOVIE_KEY = "idMovieKey";
+    public static final String REVIEW_LIST_KEY = "reviewListKey";
+    public static final String VIDEO_LIST_KEY = "videoListKey";
 
     /* Constant for URL Images*/
     private static final String BASE_URL_IMG_2 = "http://image.tmdb.org/t/p/w185/";
@@ -72,8 +78,12 @@ public class DetailMovie extends AppCompatActivity implements LoaderManager.Load
     /* LoaderCallBack for Video's Loader */
     private LoaderCallbacks<List<Video>> videoResultLoaderListener;
 
-    /* List of videos */
+    /* List of videos and reviews (only page 1)*/
     private List<Video> mVideosList = new ArrayList<>();
+    private List<Review> mReviewsList = new ArrayList<>();
+
+    /*Database*/
+    private AppDataBase mDb;
 
 
     @Override
@@ -100,9 +110,11 @@ public class DetailMovie extends AppCompatActivity implements LoaderManager.Load
         videosAdapter = new VideosAdapter(this, mVideosList);
         mRecyclerViewVideos.setAdapter(videosAdapter);
 
+        mDb = AppDataBase.getInstance(this);
+
         if (savedInstanceState != null) {
             if (savedInstanceState.containsKey(ID_MOVIE_KEY)) {
-                idMovie = savedInstanceState.getInt(ID_MOVIE_KEY);
+                idMovieSaveInstance = savedInstanceState.getInt(ID_MOVIE_KEY);
             }
         }
 
@@ -117,7 +129,7 @@ public class DetailMovie extends AppCompatActivity implements LoaderManager.Load
                     intentStartThisActivity.hasExtra("DATE_RELEASE") &&
                     intentStartThisActivity.hasExtra("VOTE_AVERAGE")) {
 
-                idMovie = intentStartThisActivity.getIntExtra("ID", 0);
+                idMovieIntent = intentStartThisActivity.getIntExtra("ID", 0);
                 String mTitle = intentStartThisActivity.getStringExtra("TITLE");
                 String mPosterPath = intentStartThisActivity.getStringExtra("POSTER_PATH");
                 String mOriginalTitle = intentStartThisActivity.getStringExtra("ORIGINAL_TITLE");
@@ -132,96 +144,85 @@ public class DetailMovie extends AppCompatActivity implements LoaderManager.Load
                 mSynopsisMovie.setText(mSynopsis);
                 mDateReleaseMovie.setText(mDateRelease);
                 mVoteAverageMovie.setRating(setRatingVote(mVoteAverage));
+
+                mMovie = new Movie(idMovieIntent, mTitle, mPosterPath, mOriginalTitle, mSynopsis, mVoteAverage, mDateRelease);
+                setTintStar(lista(mMovie));
+
+                if (idMovieIntent == idMovieSaveInstance) {
+                    mReviewsList = savedInstanceState.getParcelableArrayList(REVIEW_LIST_KEY);
+                    mVideosList = savedInstanceState.getParcelableArrayList(VIDEO_LIST_KEY);
+                } else {
+                    LoaderManager loaderManager = getSupportLoaderManager();
+                    Loader<Object> searchLoader = loaderManager.getLoader(LOADER_ID);
+                    if (searchLoader == null) {
+                        loaderManager.initLoader(LOADER_ID, null, this);
+                    } else {
+                        loaderManager.restartLoader(LOADER_ID, null, this);
+                    }
+
+                    startLoaderCallbackVideo();
+
+                    Loader<Object> searchLoaderVideo = loaderManager.getLoader(LOADER_VIDEO_ID);
+
+                    if (searchLoaderVideo == null) {
+                        getSupportLoaderManager().initLoader(LOADER_VIDEO_ID, null, videoResultLoaderListener);
+                    } else {
+                        getSupportLoaderManager().restartLoader(LOADER_VIDEO_ID, null, videoResultLoaderListener);
+                    }
+                }
             }
         }
 
         mFavorite.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                setTintStar();
-            }
+                if (lista(mMovie)){
+                    mDb.movieDao().deleteFavoriteMovie(mMovie);
+                    setTintStar(false);
+                    Toast.makeText(getApplicationContext(),"Removed to favorite list!", Toast.LENGTH_SHORT).show();
 
-        });
-
-//        mVideo.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View view) {
-//                openVideo(urlVideo);
-//            }
-//        });
-
-        LoaderManager loaderManager = getSupportLoaderManager();
-        Loader<Object> searchLoader = loaderManager.getLoader(LOADER_ID);
-        if (searchLoader == null) {
-            loaderManager.initLoader(LOADER_ID, null, this);
-        } else {
-            loaderManager.restartLoader(LOADER_ID, null, this);
-        }
-
-        videoResultLoaderListener = new LoaderCallbacks<List<Video>>() {
-            @NonNull
-            @Override
-            public Loader<List<Video>> onCreateLoader(int id, @Nullable Bundle args) {
-                return new AsyncTaskLoader<List<Video>>(getBaseContext()) {
-
-                    @Override
-                    protected void onStartLoading() {
-                        forceLoad();
-                    }
-
-                    @Nullable
-                    @Override
-                    public List<Video> loadInBackground() {
-                        service = RetrofitClientInstance.getRetrofitInstance().create(GetDataService.class);
-
-                        retrofit2.Call<PageVideo> call;
-
-                        List<Video> retorno = null;
-
-                        call = service.getVideos(idMovie);
-
-                        try {
-                            PageVideo pageVideo = call.execute().body();
-                            retorno = pageVideo.getVideos();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-
-                        return retorno;
-                    }
-                };
-            }
-
-            @Override
-            public void onLoadFinished(@NonNull Loader<List<Video>> loader, List<Video> data) {
-                if (data != null) {
-                    mVideosList.addAll(data);
-                    videosAdapter.setVideosList(data, 1);
+                }else {
+                    mDb.movieDao().insertFavoriteMovie(mMovie);
+                    setTintStar(true);
+                    Toast.makeText(getApplicationContext(),"Added to favorite list!", Toast.LENGTH_SHORT).show();
                 }
             }
 
-            @Override
-            public void onLoaderReset(@NonNull Loader<List<Video>> loader) {
-
-            }
-        };
-
-
-        getSupportLoaderManager().initLoader(LOADER_VIDEO_ID, null, videoResultLoaderListener);
+        });
     }
 
     /* Others */
+
+    public boolean lista(Movie movie) {
+
+        List<Movie> moviesDb = mDb.movieDao().getFavoriteMovies();
+
+        for (int i = 0; i < moviesDb.size(); i++) {
+            if (moviesDb.get(i).getId() == movie.getId() && moviesDb.get(i).getTitle().equals(movie.getTitle())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 
     public float setRatingVote(float voteAverage) {
         float average = ((voteAverage * 5) / 10);
         return average;
     }
 
+    public void setTintStar(boolean exists) {
+        if (exists == true) {
+            mFavorite.setCompoundDrawablesWithIntrinsicBounds(getBaseContext().getResources().
+                    getDrawable(R.drawable.ic_star_black_24dp), null, null, null);
+            mFavorite.setTextColor(getResources().getColor(R.color.colorAccent));
+        } else {
+            mFavorite.setCompoundDrawablesWithIntrinsicBounds(getBaseContext().getResources().
+                    getDrawable(R.drawable.ic_star_border_black_24dp), null, null, null);
+            mFavorite.setTextColor(getResources().getColor(R.color.colorPrimaryDark));
+        }
 
-    public void setTintStar() {
-        mFavorite.setCompoundDrawablesWithIntrinsicBounds(getBaseContext().getResources().
-                getDrawable(R.drawable.ic_star_black_24dp), null, null, null);
-        mFavorite.setTextColor(getResources().getColor(R.color.colorAccent));
+
     }
 
     public void openVideo(String url) {
@@ -233,13 +234,25 @@ public class DetailMovie extends AppCompatActivity implements LoaderManager.Load
         }
     }
 
+    /* DATABASE */
+
     /* SaveInstanceState */
 
     @Override
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
 
-        outState.putInt(ID_MOVIE_KEY, idMovie);
+        outState.putInt(ID_MOVIE_KEY, idMovieSaveInstance);
+        outState.putParcelableArrayList(REVIEW_LIST_KEY, (ArrayList<? extends Parcelable>) mReviewsList);
+        outState.putParcelableArrayList(VIDEO_LIST_KEY, (ArrayList<? extends Parcelable>) mVideosList);
+
+    }
+
+    /* Click for videos adapter*/
+
+    @Override
+    public void onClickHandler(Video video) {
+        openVideo(URL_YOUTUBE + video.getKey());
     }
 
     /* LOADER REVIEWS */
@@ -271,11 +284,11 @@ public class DetailMovie extends AppCompatActivity implements LoaderManager.Load
 
                 List<Review> retorno = null;
 
-                call = service.getReviews(idMovie);
+                call = service.getReviews(idMovieIntent);
 
                 try {
                     PageReview pageReview = call.execute().body();
-                    totalViews = pageReview.getTotalResults();
+                    totalReviews = pageReview.getTotalResults();
                     retorno = pageReview.getReviews();
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -295,23 +308,22 @@ public class DetailMovie extends AppCompatActivity implements LoaderManager.Load
     @Override
     public void onLoadFinished(@NonNull Loader<List<Review>> loader, List<Review> data) {
         if (data != null && data.size() > 0) {
+            mReviewsList.addAll(data);
+
             if (data.get(0).getContent().length() >= 77) {
                 mReview.setText(data.get(0).getContent().substring(0, 76) + "...");
             } else {
                 mReview.setText(data.get(0).getContent());
             }
+
             mReviewAuthor.setText(data.get(0).getAuthor());
-            mViewAll.setText("View All (" + totalViews + ")");
+            mViewAll.setText("View All (" + totalReviews + ")");
+
         } else {
             mReview.setText("There aren't reviews for this movie yet.");
             mReviewAuthor.setVisibility(View.INVISIBLE);
             mViewAll.setVisibility(View.GONE);
         }
-
-//        if(data.isEmpty()){
-//            Toast.makeText(this, data.get(0).getAuthor(), Toast.LENGTH_LONG).show();
-//            Toast.makeText(this, "VAZIO", Toast.LENGTH_LONG).show();
-//        }
 
     }
 
@@ -320,10 +332,59 @@ public class DetailMovie extends AppCompatActivity implements LoaderManager.Load
 
     }
 
-    /* Click for videos adapter*/
+    /* Loader Videos*/
 
-    @Override
-    public void onClickHandler(Video video) {
-        openVideo("https://www.youtube.com/watch?v=" + video.getKey());
+    public void startLoaderCallbackVideo() {
+        videoResultLoaderListener = new LoaderCallbacks<List<Video>>() {
+            @NonNull
+            @Override
+            public Loader<List<Video>> onCreateLoader(int id, @Nullable Bundle args) {
+                return new AsyncTaskLoader<List<Video>>(getBaseContext()) {
+
+                    @Override
+                    protected void onStartLoading() {
+                        forceLoad();
+                    }
+
+                    @Nullable
+                    @Override
+                    public List<Video> loadInBackground() {
+                        service = RetrofitClientInstance.getRetrofitInstance().create(GetDataService.class);
+
+                        retrofit2.Call<PageVideo> call;
+
+                        List<Video> retorno = null;
+
+                        call = service.getVideos(idMovieIntent);
+
+                        try {
+                            PageVideo pageVideo = call.execute().body();
+                            retorno = pageVideo.getVideos();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+
+                        return retorno;
+                    }
+                };
+            }
+
+            @Override
+            public void onLoadFinished(@NonNull Loader<List<Video>> loader, List<Video> data) {
+                if (data != null) {
+                    mVideosList.addAll(data);
+                    videosAdapter.setVideosList(data, 1);
+                } else {
+
+                }
+            }
+
+            @Override
+            public void onLoaderReset(@NonNull Loader<List<Video>> loader) {
+
+            }
+        };
     }
+
+
 }
