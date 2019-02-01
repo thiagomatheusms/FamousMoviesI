@@ -47,7 +47,6 @@ public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MoviesAdap
     @Override
     public void onBindViewHolder(@NonNull MoviesAdapterViewHolder holder, int position) {
         String urlMoviePoster = mMoviesList.get(position).getPoster_path();
-        String titulo = mMoviesList.get(position).getTitle();
 
 //        Glide.with(holder.itemView).load(BASE_URL_IMG + urlMoviePoster).into(holder.mImageMovie);
         Picasso.get().load(BASE_URL_IMG + urlMoviePoster)
@@ -55,7 +54,6 @@ public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MoviesAdap
                 .error(R.drawable.ic_launcher_foreground)
                 .fit()
                 .into(holder.mImageMovie);
-//        holder.mImageMovie.setText(titulo);
     }
 
     @Override

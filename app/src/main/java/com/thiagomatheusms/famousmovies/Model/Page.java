@@ -10,6 +10,9 @@ public class Page {
     @SerializedName("page")
     private int title;
 
+    @SerializedName("total_pages")
+    private int totalPages;
+
     @SerializedName("results")
     private List<Movie> movies;
 
@@ -34,4 +37,11 @@ public class Page {
         this.title = title;
     }
 
+    public int getTotalPages() {
+        return totalPages;
+    }
+
+    public void setTotalPages(int totalPages) {
+        this.totalPages = totalPages;
+    }
 }

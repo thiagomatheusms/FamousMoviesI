@@ -14,4 +14,7 @@
     <string name="action_filter_popular">Popular</string>
     <string name="movie_poster_in_miniature">Movie poster in miniature</string>
 
+    <!-- Item Video List Strings -->
+    <string name="video_name">Video Name</string>
+
 </resources>
