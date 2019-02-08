@@ -4,40 +4,35 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/colorDarkGray">
+    android:background="@color/colorDarkGray"
+    tools:context=".ReviewsActivity">
 
     <android.support.v7.widget.RecyclerView
-        android:id="@+id/rv_movies"
+        android:id="@+id/rv_reviews"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginBottom="8dp"
+        android:layout_marginTop="8dp"
         app:layoutManager="android.support.v7.widget.GridLayoutManager"
-        app:layout_constraintBottom_toTopOf="@+id/pb_loading_indicator"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:spanCount="2"
-        tools:listitem="@layout/item_movie_list">
-
-    </android.support.v7.widget.RecyclerView>
+        tools:listitem="@layout/item_review_list"></android.support.v7.widget.RecyclerView>
 
     <ProgressBar
-        android:id="@+id/pb_loading_indicator"
+        android:id="@+id/pb_loading_indicator_review"
         android:layout_width="42dp"
         android:layout_height="42dp"
         android:layout_gravity="center"
-        android:layout_marginBottom="8dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginLeft="8dp"
-        android:layout_marginRight="8dp"
-        android:layout_marginStart="8dp"
+        android:layout_marginBottom="16dp"
         android:visibility="invisible"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 
     <TextView
-        android:id="@+id/tv_error_message"
+        android:id="@+id/tv_error_message_review"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
@@ -47,11 +42,12 @@
         android:layout_marginRight="16dp"
         android:layout_marginStart="16dp"
         android:layout_marginTop="8dp"
+        android:textColor="@color/colorWhite"
         android:padding="10dp"
         android:text="@string/error_message"
         android:textSize="20sp"
         android:visibility="invisible"
-        app:layout_constraintBottom_toBottomOf="@+id/pb_loading_indicator"
+        app:layout_constraintBottom_toBottomOf="@+id/pb_loading_indicator_review"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />

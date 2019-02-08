@@ -1,5 +1,8 @@
 package com.thiagomatheusms.famousmovies;
 
+import android.arch.lifecycle.LiveData;
+import android.arch.lifecycle.Observer;
+import android.arch.lifecycle.ViewModelProviders;
 import android.os.Debug;
 import android.os.Parcelable;
 import android.os.PersistableBundle;
@@ -28,6 +31,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.thiagomatheusms.famousmovies.Adapter.MoviesAdapter;
+import com.thiagomatheusms.famousmovies.Database.AppDataBase;
+import com.thiagomatheusms.famousmovies.Database.AppExecutors;
+import com.thiagomatheusms.famousmovies.Database.MainViewModel;
 import com.thiagomatheusms.famousmovies.Endpoints.GetDataService;
 import com.thiagomatheusms.famousmovies.Model.Movie;
 import com.thiagomatheusms.famousmovies.Model.Page;
@@ -61,12 +67,13 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
     private Handler handler;
 
     //Others variables
-    private String filter = "popular";
+    private String filter = "topRated";
     private int mCurrentPage = 0;
     private int mTotalPage = 0;
     private EndlessScroll scroolListener;
     private int currentItems;
     private List<Movie> mMoviesList = new ArrayList<>();
+    // GridLayoutManager layoutManager;
 
     //constant for loader
     private static final int LOADER_ID = 100;
@@ -77,7 +84,8 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
     private static final String TOTAL_PAGE_KEY = "totalPageKey";
     private static final String MOVIES_LIST_KEY = "moviesListKey";
 
-    GridLayoutManager layoutManager;
+    //Database
+    private AppDataBase mDb;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -89,47 +97,63 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
 
         mRecyclerViewMovies = (RecyclerView) findViewById(R.id.rv_movies);
 
-        layoutManager = new GridLayoutManager(this, 2);
-        mRecyclerViewMovies.setLayoutManager(layoutManager);
+        //layoutManager = new GridLayoutManager(this, 2);
+        //mRecyclerViewMovies.setLayoutManager(layoutManager);
         mRecyclerViewMovies.setHasFixedSize(true);
 
         mMoviesAdapter = new MoviesAdapter(this, mMoviesList);
         mRecyclerViewMovies.setAdapter(mMoviesAdapter);
 
+        mDb = AppDataBase.getInstance(this);
+
         if (savedInstanceState != null) {
             filter = savedInstanceState.getString(FILTER_KEY);
             mCurrentPage = savedInstanceState.getInt(CURRENT_PAGE_KEY);
             mTotalPage = savedInstanceState.getInt(TOTAL_PAGE_KEY);
-
-            if (savedInstanceState.containsKey(MOVIES_LIST_KEY)) {
-                mMoviesList = savedInstanceState.getParcelableArrayList(MOVIES_LIST_KEY);
-
-                if (mMoviesList != null) {
-                    mMoviesAdapter.setMoviesList(mMoviesList, 1);
-                }
-            }
         }
 
+        if (filter.equalsIgnoreCase("popular") || filter.equalsIgnoreCase("topRated")) {
+            if (savedInstanceState != null) {
+                if (savedInstanceState.containsKey(MOVIES_LIST_KEY)) {
+                    mMoviesList = savedInstanceState.getParcelableArrayList(MOVIES_LIST_KEY);
 
-        handler = new Handler() {
-            @Override
-            public void handleMessage(Message msg) {
-                super.handleMessage(msg);
-                internetAnswer(msg);
+                    if (mMoviesList != null) {
+                        mMoviesAdapter.setMoviesList(mMoviesList, 1);
+                    }
+                }
             }
-        };
+            handlerInitialize();
+        } else {
+            getFavoritesMovies();
+        }
 
-        sendHandlerMessage();
+    }
 
-        scroolListener = new EndlessScroll(layoutManager) {
-            @Override
-            public void onLoadMore(int page, int totalItemsCount, RecyclerView view) {
-                sendHandlerMessage();
-            }
-        };
+    /* Handler Methods Associates */
 
-        mRecyclerViewMovies.addOnScrollListener(scroolListener);
+    private void handlerInitialize() {
+        if (filter.equalsIgnoreCase("popular") || filter.equalsIgnoreCase("topRated")) {
+            handler = new Handler() {
+                @Override
+                public void handleMessage(Message msg) {
+                    super.handleMessage(msg);
+                    internetAnswer(msg);
+                }
+            };
 
+            sendHandlerMessage();
+
+            scroolListener = new EndlessScroll((GridLayoutManager) mRecyclerViewMovies.getLayoutManager()) {
+                @Override
+                public void onLoadMore(int page, int totalItemsCount, RecyclerView view) {
+                    if (filter.equalsIgnoreCase("popular") || filter.equalsIgnoreCase("topRated")) {
+                        sendHandlerMessage();
+                    }
+                }
+            };
+
+            mRecyclerViewMovies.addOnScrollListener(scroolListener);
+        }
     }
 
     private void sendHandlerMessage() {
@@ -157,7 +181,7 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
 
     }
 
-    /* SHOW */
+    /* Show Views */
 
     private void showDataView() {
         mErrorMessage.setVisibility(View.INVISIBLE);
@@ -165,12 +189,12 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
     }
 
     private void showErrorMessage() {
-        mLoadingIndicator.setVisibility(View.INVISIBLE);
+        mLoadingIndicator.setVisibility(View.GONE);
         mRecyclerViewMovies.setVisibility(View.INVISIBLE);
         mErrorMessage.setVisibility(View.VISIBLE);
     }
 
-    /* MENU */
+    /* Menu */
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -186,19 +210,45 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
 
         switch (idItem) {
             case R.id.action_filter_popular:
-                listClear();
                 filter = "popular";
                 setTitle("Popular");
+                listClear();
                 break;
 
             case R.id.action_filter_topRated:
-                listClear();
                 filter = "topRated";
                 setTitle("Top Rated");
+                listClear();
+                break;
+
+            case R.id.action_filter_favorites:
+                filter = "favorites";
+                setTitle("Favorites");
+                listFavorites();
                 break;
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    private void listFavorites() {
+        mCurrentPage = 0;
+        mTotalPage = 0;
+        mMoviesList.clear();
+        mMoviesAdapter.notifyDataSetChanged();
+        if (scroolListener != null) {
+            scroolListener.resetState();
+        }
+
+        getFavoritesMovies();
+
+
+//        if (mDb.movieDao().getFavoriteMovies() != null) {
+//
+//
+//        } else {
+//            showErrorMessage();
+//        }
     }
 
     private void listClear() {
@@ -206,23 +256,30 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
         mTotalPage = 0;
         mMoviesList.clear();
         mMoviesAdapter.notifyDataSetChanged();
-        scroolListener.resetState();
+
+        if (handler == null) {
+            handlerInitialize();
+        }
+        if (scroolListener != null) {
+            scroolListener.resetState();
+        }
         sendHandlerMessage();
     }
 
-    /* CLICK */
+    private void getFavoritesMovies() {
 
-    @Override
-    public void onClickHandler(Movie movieClicked) {
-        Intent intent = new Intent(getBaseContext(), DetailMovie.class);
-        intent.putExtra("ID", movieClicked.getId());
-        intent.putExtra("TITLE", movieClicked.getTitle());
-        intent.putExtra("POSTER_PATH", movieClicked.getPoster_path());
-        intent.putExtra("ORIGINAL_TITLE", movieClicked.getOriginal_title());
-        intent.putExtra("SYNOPSIS", movieClicked.getSynopsis());
-        intent.putExtra("DATE_RELEASE", movieClicked.getDate_release());
-        intent.putExtra("VOTE_AVERAGE", movieClicked.getVote_average());
-        startActivity(intent);
+        MainViewModel viewModel = ViewModelProviders.of(this).get(MainViewModel.class);
+        viewModel.getFavoriteMovies().observe(this, new Observer<List<Movie>>() {
+            @Override
+            public void onChanged(@Nullable List<Movie> movieList) {
+                Log.d("teste", "Updating list of tasks from LiveData in ViewModel");
+//                mMoviesList = movieList;
+                if(filter.equalsIgnoreCase("favorites")) {
+                    showDataView();
+                    mMoviesAdapter.setMoviesList(movieList, currentItems);
+                }
+            }
+        });
     }
 
     /* LOADER */
@@ -286,7 +343,7 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
 
     @Override
     public void onLoadFinished(Loader<List<Movie>> loader, List<Movie> data) {
-        mLoadingIndicator.setVisibility(View.INVISIBLE);
+        mLoadingIndicator.setVisibility(View.GONE);
         currentItems = mMoviesAdapter.getItemCount();
 
         if (data != null) {
@@ -304,6 +361,21 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Mov
     @Override
     public void onLoaderReset(@NonNull android.support.v4.content.Loader<List<Movie>> loader) {
 
+    }
+
+    /* CLICK */
+
+    @Override
+    public void onClickHandler(Movie movieClicked) {
+        Intent intent = new Intent(getBaseContext(), DetailMovie.class);
+        intent.putExtra("ID", movieClicked.getId());
+        intent.putExtra("TITLE", movieClicked.getTitle());
+        intent.putExtra("POSTER_PATH", movieClicked.getPoster_path());
+        intent.putExtra("ORIGINAL_TITLE", movieClicked.getOriginal_title());
+        intent.putExtra("SYNOPSIS", movieClicked.getSynopsis());
+        intent.putExtra("DATE_RELEASE", movieClicked.getDate_release());
+        intent.putExtra("VOTE_AVERAGE", movieClicked.getVote_average());
+        startActivity(intent);
     }
 
     @Override

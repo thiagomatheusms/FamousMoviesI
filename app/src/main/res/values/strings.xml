@@ -1,20 +1,37 @@
 <resources>
     <string name="app_name">Famous Movies</string>
-    <string name="error_message">Oh Oh, something has occurred wrong!</string>
-    <string name="title">Título</string>
-    <string name="original_title">Título original:</string>
-    <string name="release_date">Data de lançamento:</string>
-    <string name="synopsis">Sinopse</string>
-    <string name="vote_average">Avaliação dos usuários</string>
-
 
     <!-- Menu Strings -->
     <string name="action_filter">Filter</string>
     <string name="action_filter_topRated">Top Rated</string>
     <string name="action_filter_popular">Popular</string>
+    <string name="action_filter_favorites">Favorites</string>
+
+    <!-- MainActivity.xml -->
+    <string name="error_message">Oh oh, something has occurred wrong!</string>
+
+    <!-- Item_Movie_List.xml -->
+    <string name="content_description_poster">Movie Poster</string>
+
+    <!-- Activity_Detail_Movie.xml -->
     <string name="movie_poster_in_miniature">Movie poster in miniature</string>
+    <string name="title">Title</string>
+    <string name="original_title_label">Original Title:</string>
+    <string name="original_title">Original Movie Title</string>
+    <string name="release_date_label">Release Date:</string>
+    <string name="release_date">20/12/2018</string>
+    <string name="synopsis_label">Synopsis</string>
+    <string name="synopsis">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</string>
+    <string name="vote_average_label">Vote Average</string>
+    <string name="button_favorite">Favorite</string>
+    <string name="reviews_label">Reviews</string>
+    <string name="reviews">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore.</string>
+    <string name="reviews_author">Author</string>
+    <string name="view_all">View All</string>
+    <string name="videos_label">Videos</string>
 
     <!-- Item Video List Strings -->
     <string name="video_name">Video Name</string>
+    <string name="title_activity_review">Review</string>
 
 </resources>

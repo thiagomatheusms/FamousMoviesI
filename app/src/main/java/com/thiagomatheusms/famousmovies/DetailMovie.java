@@ -2,6 +2,8 @@ package com.thiagomatheusms.famousmovies;
 
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
+import android.arch.lifecycle.Observer;
+import android.arch.lifecycle.ViewModelProviders;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.drawable.Drawable;
@@ -32,6 +34,10 @@ import com.bumptech.glide.Glide;
 import com.thiagomatheusms.famousmovies.Adapter.MoviesAdapter;
 import com.thiagomatheusms.famousmovies.Adapter.VideosAdapter;
 import com.thiagomatheusms.famousmovies.Database.AppDataBase;
+import com.thiagomatheusms.famousmovies.Database.AppExecutors;
+import com.thiagomatheusms.famousmovies.Database.DetailMovieViewModel;
+import com.thiagomatheusms.famousmovies.Database.DetailMovieViewModelFactory;
+import com.thiagomatheusms.famousmovies.Database.MainViewModel;
 import com.thiagomatheusms.famousmovies.Endpoints.GetDataService;
 import com.thiagomatheusms.famousmovies.Model.Movie;
 import com.thiagomatheusms.famousmovies.Model.Page;
@@ -75,6 +81,9 @@ public class DetailMovie extends AppCompatActivity implements LoaderManager.Load
     /* Constant for URL Images*/
     private static final String BASE_URL_IMG_2 = "http://image.tmdb.org/t/p/w185/";
 
+    /* Constant for Put Extra Intent*/
+    public static boolean IS_FAVORITE = false;
+
     /* LoaderCallBack for Video's Loader */
     private LoaderCallbacks<List<Video>> videoResultLoaderListener;
 
@@ -84,6 +93,8 @@ public class DetailMovie extends AppCompatActivity implements LoaderManager.Load
 
     /*Database*/
     private AppDataBase mDb;
+
+    boolean tem = false;
 
 
     @Override
@@ -146,7 +157,7 @@ public class DetailMovie extends AppCompatActivity implements LoaderManager.Load
                 mVoteAverageMovie.setRating(setRatingVote(mVoteAverage));
 
                 mMovie = new Movie(idMovieIntent, mTitle, mPosterPath, mOriginalTitle, mSynopsis, mVoteAverage, mDateRelease);
-                setTintStar(lista(mMovie));
+                checkMovieIsFavorite(mMovie);
 
                 if (idMovieIntent == idMovieSaveInstance) {
                     mReviewsList = savedInstanceState.getParcelableArrayList(REVIEW_LIST_KEY);
@@ -176,39 +187,55 @@ public class DetailMovie extends AppCompatActivity implements LoaderManager.Load
         mFavorite.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (lista(mMovie)){
-                    mDb.movieDao().deleteFavoriteMovie(mMovie);
+                if (IS_FAVORITE) {
+                    AppExecutors.getsInstance().getDiskIO().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            mDb.movieDao().deleteFavoriteMovie(mMovie);
+                        }
+                    });
                     setTintStar(false);
-                    Toast.makeText(getApplicationContext(),"Removed to favorite list!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getApplicationContext(), "Removed to favorite list!", Toast.LENGTH_SHORT).show();
 
-                }else {
-                    mDb.movieDao().insertFavoriteMovie(mMovie);
-                    setTintStar(true);
-                    Toast.makeText(getApplicationContext(),"Added to favorite list!", Toast.LENGTH_SHORT).show();
+                } else {
+                    AppExecutors.getsInstance().getDiskIO().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            mDb.movieDao().insertFavoriteMovie(mMovie);
+                        }
+                    });
+//                    setTintStar(true);
+                    Toast.makeText(getApplicationContext(), "Added to favorite list!", Toast.LENGTH_SHORT).show();
                 }
             }
 
+        });
+
+        mViewAll.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(getApplicationContext(), ReviewsActivity.class);
+                intent.putExtra("MOVIE_KEY", mMovie);
+                startActivity(intent);
+            }
         });
     }
 
     /* Others */
 
-    public boolean lista(Movie movie) {
-
-        List<Movie> moviesDb = mDb.movieDao().getFavoriteMovies();
-
-        for (int i = 0; i < moviesDb.size(); i++) {
-            if (moviesDb.get(i).getId() == movie.getId() && moviesDb.get(i).getTitle().equals(movie.getTitle())) {
-                return true;
+    public void checkMovieIsFavorite(final Movie movie) {
+        DetailMovieViewModelFactory factory = new DetailMovieViewModelFactory(mDb, movie.getId());
+        DetailMovieViewModel movieViewModel = ViewModelProviders.of(this, factory).get(DetailMovieViewModel.class);
+        movieViewModel.getMovie().observe(this, new Observer<Movie>() {
+            @Override
+            public void onChanged(@Nullable Movie movie) {
+                if (movie != null) {
+                    setTintStar(true);
+                } else {
+                    setTintStar(false);
+                }
             }
-        }
-        return false;
-    }
-
-
-    public float setRatingVote(float voteAverage) {
-        float average = ((voteAverage * 5) / 10);
-        return average;
+        });
     }
 
     public void setTintStar(boolean exists) {
@@ -216,13 +243,20 @@ public class DetailMovie extends AppCompatActivity implements LoaderManager.Load
             mFavorite.setCompoundDrawablesWithIntrinsicBounds(getBaseContext().getResources().
                     getDrawable(R.drawable.ic_star_black_24dp), null, null, null);
             mFavorite.setTextColor(getResources().getColor(R.color.colorAccent));
+            IS_FAVORITE = true;
+
         } else {
             mFavorite.setCompoundDrawablesWithIntrinsicBounds(getBaseContext().getResources().
                     getDrawable(R.drawable.ic_star_border_black_24dp), null, null, null);
             mFavorite.setTextColor(getResources().getColor(R.color.colorPrimaryDark));
+            IS_FAVORITE = false;
+
         }
+    }
 
-
+    public float setRatingVote(float voteAverage) {
+        float average = ((voteAverage * 5) / 10);
+        return average;
     }
 
     public void openVideo(String url) {
@@ -234,7 +268,6 @@ public class DetailMovie extends AppCompatActivity implements LoaderManager.Load
         }
     }
 
-    /* DATABASE */
 
     /* SaveInstanceState */
 
